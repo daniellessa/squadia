@@ -15,6 +15,10 @@ export interface Agent {
   personality: string
   status: AgentStatus
   channel: string | null
+  llm_provider: "openai" | "anthropic" | "google" | null
+  llm_model: string | null
+  llm_api_key: string | null
+  system_prompt: string | null
   created_at: string
 }
 

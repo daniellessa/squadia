@@ -27,6 +27,10 @@ export function AgentModal({ open, onOpenChange }: AgentModalProps) {
     role: '',
     personality: '',
     status: 'idle' as AgentStatus,
+    llm_provider: null as "openai" | "anthropic" | "google" | null,
+    llm_model: '',
+    llm_api_key: '',
+    system_prompt: '',
   })
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -44,6 +48,10 @@ export function AgentModal({ open, onOpenChange }: AgentModalProps) {
       role: '',
       personality: '',
       status: 'idle',
+      llm_provider: null,
+      llm_model: '',
+      llm_api_key: '',
+      system_prompt: '',
     })
     onOpenChange(false)
   }
@@ -110,6 +118,78 @@ export function AgentModal({ open, onOpenChange }: AgentModalProps) {
               <option value="blocked">Bloqueado</option>
             </Select>
           </div>
+
+          <div className="border-t pt-4" style={{ borderColor: "var(--border-default)" }}>
+            <h3 className="text-sm font-semibold mb-3">Configuração de LLM</h3>
+
+            <div className="space-y-4">
+              <div>
+                <label className="text-sm font-medium mb-2 block">Provider</label>
+                <Select
+                  value={formData.llm_provider || ''}
+                  onChange={(e) =>
+                    setFormData({
+                      ...formData,
+                      llm_provider: e.target.value ? e.target.value as "openai" | "anthropic" | "google" : null,
+                    })
+                  }
+                >
+                  <option value="">Nenhum</option>
+                  <option value="openai">OpenAI</option>
+                  <option value="anthropic">Anthropic</option>
+                  <option value="google">Google</option>
+                </Select>
+              </div>
+
+              {formData.llm_provider && (
+                <>
+                  <div>
+                    <label className="text-sm font-medium mb-2 block">Modelo</label>
+                    <Input
+                      value={formData.llm_model}
+                      onChange={(e) =>
+                        setFormData({ ...formData, llm_model: e.target.value })
+                      }
+                      placeholder={
+                        formData.llm_provider === 'openai'
+                          ? 'Ex: gpt-4o'
+                          : formData.llm_provider === 'anthropic'
+                          ? 'Ex: claude-sonnet-4-5'
+                          : 'Ex: gemini-2.0-flash'
+                      }
+                    />
+                  </div>
+
+                  <div>
+                    <label className="text-sm font-medium mb-2 block">API Key</label>
+                    <Input
+                      type="password"
+                      value={formData.llm_api_key}
+                      onChange={(e) =>
+                        setFormData({ ...formData, llm_api_key: e.target.value })
+                      }
+                      placeholder="Sua API Key"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="text-sm font-medium mb-2 block">
+                      System Prompt
+                    </label>
+                    <Textarea
+                      value={formData.system_prompt}
+                      onChange={(e) =>
+                        setFormData({ ...formData, system_prompt: e.target.value })
+                      }
+                      placeholder="Instruções de sistema para o agente..."
+                      rows={3}
+                    />
+                  </div>
+                </>
+              )}
+            </div>
+          </div>
+
           <div className="flex justify-end gap-2 pt-4">
             <Button
               type="button"

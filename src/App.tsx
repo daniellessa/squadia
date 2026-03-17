@@ -7,6 +7,7 @@ import { Onboarding } from './pages/Onboarding'
 import { Dashboard } from './pages/Dashboard'
 import { Agents } from './pages/Agents'
 import { AgentDetail } from './pages/AgentDetail'
+import { Chat } from './pages/Chat'
 import { Tasks } from './pages/Tasks'
 import { Settings } from './pages/Settings'
 import { supabase } from './lib/supabase'
@@ -90,6 +91,7 @@ function AppRoutes() {
           <Route path="/dashboard" element={<Dashboard />} />
           <Route path="/agents" element={<Agents />} />
           <Route path="/agents/:id" element={<AgentDetail />} />
+          <Route path="/chat/:id" element={<Chat />} />
           <Route path="/tasks" element={<Tasks />} />
           <Route path="/settings" element={<Settings />} />
         </Route>
