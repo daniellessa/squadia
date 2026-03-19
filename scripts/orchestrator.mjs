@@ -12,10 +12,19 @@ import { createClient } from '@supabase/supabase-js'
 import { readdirSync, readFileSync, statSync, existsSync } from 'fs'
 import { join } from 'path'
 
-const SUPABASE_URL = 'https://ytmkaujhzrfxkvzufppo.supabase.co'
-const SUPABASE_KEY = '***REVOGADA***'
-const OPENCLAW_URL = 'http://127.0.0.1:19789'
-const OPENCLAW_TOKEN = 'abf28835726ca14c4b9b9688da355acd2e5a26e95e066cc57e4bc8fc5bb3b7f7'
+const SUPABASE_URL = process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL
+const SUPABASE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY
+const OPENCLAW_URL = process.env.OPENCLAW_URL || 'http://127.0.0.1:19789'
+const OPENCLAW_TOKEN = process.env.OPENCLAW_TOKEN || process.env.VITE_OPENCLAW_GATEWAY_TOKEN
+
+if (!SUPABASE_URL || !SUPABASE_KEY) {
+  console.error('❌ SUPABASE_URL e SUPABASE_SERVICE_ROLE_KEY são obrigatórios')
+  process.exit(1)
+}
+if (!OPENCLAW_TOKEN) {
+  console.error('❌ OPENCLAW_TOKEN é obrigatório')
+  process.exit(1)
+}
 const INTERVAL_MS = 10_000
 const ANALYST_EVERY_N_CYCLES = 5   // roda o analista a cada 5 ciclos (~2.5 min)
 const ANALYST_SESSION = 'agent:main:squadia-analyst'
