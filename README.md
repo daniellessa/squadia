@@ -1,150 +1,161 @@
 # SquadIA
 
-Uma plataforma SaaS que permite empresas montarem times de agentes de IA sem conhecimento técnico.
+Plataforma SaaS para montar e gerenciar times de agentes de IA sem conhecimento técnico. Cada agente é uma sessão do [OpenClaw](https://openclaw.ai), com personalidade, especialidades e memória próprias.
 
-## Stack Tecnológica
+## Stack
 
 - **Frontend:** React + Vite + TypeScript
 - **UI:** Tailwind CSS + shadcn/ui
 - **Backend/DB:** Supabase (Auth, Postgres, Realtime, Storage)
+- **Engine de IA:** OpenClaw Gateway
 - **Estado:** Zustand
-- **Data Fetching:** TanStack Query (React Query)
+- **Data Fetching:** TanStack Query
 - **Roteamento:** React Router
 
 ## Funcionalidades
 
+### Core
 - ✅ Autenticação com Magic Link e Google OAuth
 - ✅ Onboarding em 3 etapas (Empresa → Agente → Canal)
 - ✅ Dashboard com visão geral de agentes e atividades
-- ✅ Gestão completa de agentes de IA
-- ✅ Quadro Kanban para gerenciar tarefas
+- ✅ Chat em tempo real com agentes (via OpenClaw)
+- ✅ Kanban de tarefas com 6 colunas: `pending → assigned → in_progress → review → done → rejected`
 - ✅ Feed de atividades em tempo real
-- ✅ Integrações com canais (WhatsApp, Telegram, Email, Instagram)
-- ✅ Configurações de empresa e canais
 
-## Pré-requisitos
+### Agentes
+- ✅ Criação com nome automático por locale (pt-BR, en, es...)
+- ✅ Avatar com DiceBear automático + upload de imagem + picker de cor
+- ✅ Especialidades, cargo e flag `is_senior`
+- ✅ Conexão LLM configurável por agente
+- ✅ Status automático via OpenClaw health check
+- ✅ Sub-agentes: agente pode spawnar especialista temporário durante execução de task
+- ✅ Memória persistente: extração automática pós-task, injeção no system prompt
 
-- Node.js 18+ instalado
-- Conta no Supabase (gratuita)
+### Roteamento inteligente de tasks
+- ✅ Classificador analisa mensagens no Chat → simples responde on-the-fly, complexas viram tasks
+- ✅ Orquestrador faz match de tags/especialidades e atribui tasks automaticamente
+- ✅ Revisor valida resultado → `done` ou `rejected` com feedback
+- ✅ Analista detecta gaps no time e cria novos agentes automaticamente
+- ✅ Resultado retorna ao Chat via Supabase Realtime
 
-## Setup do Projeto
+### Planos e Billing
+- ✅ Planos Free / Pro / Enterprise
+- ✅ Limites reais do banco (`companies.plan`)
+- ✅ Feature locks na UI (criação automática de agentes, análise do time)
 
-### 1. Clone o repositório
+## Setup
+
+### Pré-requisitos
+
+- Node.js 18+
+- Conta no [Supabase](https://supabase.com)
+- [OpenClaw](https://openclaw.ai) instalado localmente (para dev)
+
+### 1. Clone e instale
 
 ```bash
-git clone <url-do-repositorio>
+git clone https://github.com/daniellessa/squadia.git
 cd squadia
-```
-
-### 2. Instale as dependências
-
-```bash
 npm install
 ```
 
-### 3. Configure o Supabase
+### 2. Configure o Supabase
 
-1. Crie um novo projeto no [Supabase](https://supabase.com)
-2. Copie a URL do projeto e a chave anônima (anon key)
-3. Execute o SQL do arquivo `supabase/schema.sql` no SQL Editor do Supabase
+1. Crie um projeto no Supabase
+2. Execute as migrations em ordem: `supabase/migrations/001_*.sql` → `012_*.sql`
 
-### 4. Configure as variáveis de ambiente
-
-Copie o arquivo `.env.example` para `.env`:
+### 3. Variáveis de ambiente
 
 ```bash
 cp .env.example .env
 ```
 
-Edite o arquivo `.env` e adicione suas credenciais do Supabase:
-
 ```env
-VITE_SUPABASE_URL=sua-url-do-supabase
-VITE_SUPABASE_ANON_KEY=sua-chave-anonima
+VITE_SUPABASE_URL=sua-url
+VITE_SUPABASE_ANON_KEY=sua-anon-key
+VITE_SUPABASE_SERVICE_ROLE_KEY=sua-service-role-key
+VITE_OPENCLAW_GATEWAY_TOKEN=seu-token
+VITE_OPENCLAW_GATEWAY_HTTP_URL=http://127.0.0.1:19789
 ```
 
-### 5. Execute o projeto
+### 4. Suba o OpenClaw Gateway
 
 ```bash
-npm run dev
+OPENCLAW_CONFIG_PATH=~/.openclaw-squadia/openclaw.json \
+OPENCLAW_STATE_DIR=~/.openclaw-squadia \
+openclaw gateway run --port 19789
 ```
 
-O projeto estará rodando em `http://localhost:5173`
+### 5. Rode o projeto
 
-## Estrutura do Projeto
+```bash
+# Frontend
+npm run dev
+
+# Orquestrador (em outro terminal)
+npm run orchestrator
+```
+
+Frontend: http://localhost:5173
+
+## Estrutura
 
 ```
 src/
 ├── components/
-│   ├── ui/              # Componentes shadcn/ui
-│   ├── layout/          # Sidebar, Header, Layout
-│   ├── agents/          # AgentCard, AgentList, AgentModal
+│   ├── agents/          # AgentCard, AgentModal, AgentEditModal
 │   ├── tasks/           # KanbanBoard, TaskCard, TaskModal
-│   └── activity/        # ActivityFeed, ActivityItem
-├── pages/
-│   ├── Login.tsx
-│   ├── Onboarding.tsx
-│   ├── Dashboard.tsx
-│   ├── Agents.tsx
-│   ├── AgentDetail.tsx
-│   ├── Tasks.tsx
-│   └── Settings.tsx
-├── lib/
-│   ├── supabase.ts      # Cliente Supabase
-│   └── utils.ts         # Funções utilitárias
+│   ├── layout/          # Sidebar, Layout
+│   └── ui/              # Componentes base
 ├── hooks/
 │   ├── useAgents.ts
 │   ├── useTasks.ts
-│   ├── useActivity.ts
-│   └── useAuth.ts
-├── stores/
-│   ├── authStore.ts
-│   └── agentStore.ts
-├── types/
-│   └── index.ts         # Tipos TypeScript
-├── App.tsx
-└── main.tsx
+│   ├── useChat.ts       # Integrado com OpenClaw
+│   ├── useOpenClaw.ts   # Health check + sessions
+│   └── usePlanLimits.ts
+├── lib/
+│   ├── openclaw.ts      # Client HTTP do Gateway
+│   ├── classifier.ts    # Classificador de mensagens
+│   └── agent-names.ts   # Nomes por locale
+├── pages/
+│   ├── Chat.tsx
+│   ├── Tasks.tsx
+│   ├── AgentDetail.tsx
+│   ├── Billing.tsx
+│   └── Settings.tsx
+scripts/
+└── orchestrator.mjs     # Orquestrador multi-agente
+supabase/
+└── migrations/          # 012 migrations aplicadas
 ```
 
-## Schema do Banco de Dados
+## Scripts
 
-O projeto utiliza as seguintes tabelas no Supabase:
+```bash
+npm run dev          # Servidor de desenvolvimento
+npm run build        # Build de produção
+npm run orchestrator # Orquestrador de tasks
+```
 
-- `companies` - Dados das empresas
-- `agents` - Agentes de IA
-- `tasks` - Tarefas do sistema
-- `messages` - Mensagens dos agentes
-- `activity_feed` - Feed de atividades
-- `channels` - Canais de comunicação
-- `documents` - Documentos dos agentes
-- `user_profiles` - Perfis de usuários
+## Banco de Dados
 
-Todas as tabelas possuem Row Level Security (RLS) habilitado para garantir que usuários só acessem dados de sua própria empresa.
+Tabelas principais:
+- `companies` — empresas e plano (`free` / `pro` / `enterprise`)
+- `agents` — agentes com especialidades, sessão OpenClaw, LLM connection, memórias
+- `tasks` — tarefas com Kanban, tags, assigned_to, review_feedback
+- `agent_memories` — memória persistente por agente
+- `llm_connections` — conexões LLM reutilizáveis por empresa
+- `messages` / `activity_feed` / `channels`
 
-## Scripts Disponíveis
-
-- `npm run dev` - Inicia o servidor de desenvolvimento
-- `npm run build` - Cria a build de produção
-- `npm run preview` - Preview da build de produção
-- `npm run lint` - Executa o linter
-
-## Fluxo de Uso
-
-1. **Login:** Usuário faz login com email (magic link) ou Google
-2. **Onboarding:** Novo usuário configura empresa, primeiro agente e canal
-3. **Dashboard:** Visão geral com agentes ativos e feed de atividades
-4. **Agentes:** Criação e gestão de agentes de IA com personalidades customizadas
-5. **Tarefas:** Quadro Kanban para organizar tarefas (Inbox → Em Andamento → Concluído)
-6. **Configurações:** Gerenciar empresa, canais e plano
+RLS habilitado em todas as tabelas. Orquestrador usa service_role key.
 
 ## Próximos Passos
 
-- [ ] Implementar chat em tempo real com os agentes
-- [ ] Conectar integrações reais com WhatsApp, Telegram, etc.
-- [ ] Sistema de webhooks para automações
+- [ ] Bug: cards Kanban não atualizam automaticamente (Realtime subscription)
+- [ ] Conectar integrações reais (WhatsApp, Telegram, Email, Instagram)
 - [ ] Dashboard com métricas e analytics
-- [ ] Sistema de billing e planos
-- [ ] Upload de documentos para knowledge base dos agentes
+- [ ] Upload de documentos (knowledge base dos agentes)
+- [ ] Deploy em VPS para produção
 
 ## Licença
 
