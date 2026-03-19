@@ -1,7 +1,8 @@
 import { useEffect, useState } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { supabase } from '@/lib/supabase'
-import type { Message, Agent } from '@/types'
+import { openClawClient } from '@/lib/openclaw'
+import type { Message, Agent, LlmConnection } from '@/types'
 import { useAuthStore } from '@/stores/authStore'
 
 interface ChatMessage extends Message {
@@ -171,15 +172,22 @@ export function useChat(agentId: string) {
     mutationFn: async (content: string) => {
       if (!agent) throw new Error('Agente não encontrado')
 
+      // Optimistic update — mostra a mensagem imediatamente
+      const tempId = `temp-${Date.now()}`
+      queryClient.setQueryData<ChatMessage[]>(['chat-messages', agentId], (old = []) => [
+        ...old,
+        {
+          id: tempId,
+          agent_id: agentId,
+          direction: 'in' as const,
+          content,
+          created_at: new Date().toISOString(),
+        } as ChatMessage,
+      ])
+
       const { error: userError } = await supabase
         .from('messages')
-        .insert([
-          {
-            agent_id: agentId,
-            direction: 'in',
-            content,
-          },
-        ])
+        .insert([{ agent_id: agentId, direction: 'in', content }])
         .select()
         .single()
 
@@ -188,52 +196,99 @@ export function useChat(agentId: string) {
       setIsTyping(true)
 
       try {
-        if (!agent.llm_provider || !agent.llm_model || !agent.llm_api_key) {
-          throw new Error('Agente não configurado com LLM')
-        }
-
-        const recentMessages = messages.slice(-20)
-        const conversationHistory = recentMessages.map((msg) => ({
-          role: msg.direction === 'in' ? 'user' : 'assistant',
-          content: msg.content,
-        }))
-
-        if (agent.system_prompt) {
-          conversationHistory.unshift({
-            role: 'system',
-            content: agent.system_prompt,
-          })
-        }
-
-        conversationHistory.push({
-          role: 'user',
-          content,
-        })
-
         let assistantResponse: string
 
-        if (agent.llm_provider === 'openai') {
-          assistantResponse = await callOpenAI(
-            agent.llm_api_key,
-            agent.llm_model,
-            conversationHistory
-          )
-        } else if (agent.llm_provider === 'anthropic') {
-          assistantResponse = await callAnthropic(
-            agent.llm_api_key,
-            agent.llm_model,
-            conversationHistory,
-            agent.system_prompt || undefined
-          )
-        } else if (agent.llm_provider === 'google') {
-          assistantResponse = await callGoogle(
-            agent.llm_api_key,
-            agent.llm_model,
-            conversationHistory,
-            agent.system_prompt || undefined
-          )
-        } else {
-          throw new Error('Provider não suportado')
+        // Try OpenClaw first
+        try {
+          const isOpenClawHealthy = await openClawClient.health()
+          if (isOpenClawHealthy) {
+            console.log('Using OpenClaw gateway for agent execution')
+            // Build conversation history to pass as context
+            const recentMessages = messages.slice(-20)
+            const conversationHistory = recentMessages.map((msg) => ({
+              role: msg.direction === 'in' ? ('user' as const) : ('assistant' as const),
+              content: msg.content,
+            }))
+            if (agent.system_prompt) {
+              conversationHistory.unshift({ role: 'system' as const, content: agent.system_prompt })
+            }
+            conversationHistory.push({ role: 'user' as const, content })
+            // Use openclaw:main — the gateway agent that handles all requests
+            // Pass the session key to maintain separate sessions per agent
+            const ocSessionKey = agent.openclaw_session_key || `agent:main:squadia-${agentId}`
+            assistantResponse = await openClawClient.sendMessage('main', content, conversationHistory, ocSessionKey)
+          } else {
+            throw new Error('OpenClaw gateway is not available')
+          }
+        } catch (openClawError) {
+          // Fallback to direct LLM providers if OpenClaw fails
+          console.warn('OpenClaw failed, falling back to direct LLM provider:', openClawError)
+
+          // Check if agent has a connection configured
+          let llmConnection: LlmConnection | null = null
+          if (agent.llm_connection_id) {
+            const { data: connection } = await supabase
+              .from('llm_connections')
+              .select('*')
+              .eq('id', agent.llm_connection_id)
+              .single()
+            llmConnection = connection
+          }
+
+          // Fallback to legacy fields if no connection
+          if (!llmConnection && (!agent.llm_provider || !agent.llm_model || !agent.llm_api_key)) {
+            throw new Error('Agente não configurado com LLM e OpenClaw não está disponível')
+          }
+
+          const provider = llmConnection?.provider || agent.llm_provider
+          const model = llmConnection?.model || agent.llm_model
+          const apiKey = llmConnection?.api_key || agent.llm_api_key
+
+          if (!provider || !model || !apiKey) {
+            throw new Error('Configuração de LLM incompleta')
+          }
+
+          const recentMessages = messages.slice(-20)
+          const conversationHistory = recentMessages.map((msg) => ({
+            role: msg.direction === 'in' ? 'user' : 'assistant',
+            content: msg.content,
+          }))
+
+          if (agent.system_prompt) {
+            conversationHistory.unshift({
+              role: 'system',
+              content: agent.system_prompt,
+            })
+          }
+
+          conversationHistory.push({
+            role: 'user',
+            content,
+          })
+
+          if (provider === 'openai') {
+            assistantResponse = await callOpenAI(
+              apiKey,
+              model,
+              conversationHistory
+            )
+          } else if (provider === 'anthropic') {
+            assistantResponse = await callAnthropic(
+              apiKey,
+              model,
+              conversationHistory,
+              agent.system_prompt || undefined
+            )
+          } else if (provider === 'google') {
+            assistantResponse = await callGoogle(
+              apiKey,
+              model,
+              conversationHistory,
+              agent.system_prompt || undefined
+            )
+          } else {
+            throw new Error('Provider não suportado')
+          }
         }
 
         const { data: agentMessage, error: agentError } = await supabase

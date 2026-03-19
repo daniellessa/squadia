@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import type { Agent } from '@/types';
 import { StatusBadge, type AgentStatus } from '@/components/ui/status-badge';
 import { Avatar } from '@/components/ui/avatar';
@@ -10,6 +11,8 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
+import { AgentEditModal } from '@/components/agents/AgentEditModal';
+import { useOpenClaw, getAgentStatus } from '@/hooks/useOpenClaw';
 
 interface AgentCardProps {
   agent: Agent;
@@ -24,7 +27,9 @@ const statusTextMap: Record<Agent['status'], { key: string; status: AgentStatus 
 
 export function AgentCard({ agent }: AgentCardProps) {
   const { t } = useTranslation();
-  const statusInfo = statusTextMap[agent.status];
+  const [isEditOpen, setIsEditOpen] = useState(false);
+  const { isConnected } = useOpenClaw();
+  const statusInfo = statusTextMap[getAgentStatus(agent, isConnected)];
 
   return (
     <Link to={`/agents/${agent.id}`}>
@@ -46,7 +51,7 @@ export function AgentCard({ agent }: AgentCardProps) {
         {/* Header */}
         <div className="mb-3 flex items-start justify-between">
           <div className="flex items-center gap-3">
-            <Avatar name={agent.name} size="md" />
+            <Avatar name={agent.name} size="md" color={agent.avatar_color} imageUrl={agent.avatar_url} />
             <div>
               <h3 className="label-lg font-medium" style={{ color: 'var(--text-primary)' }}>
                 {agent.name}
@@ -69,7 +74,9 @@ export function AgentCard({ agent }: AgentCardProps) {
               </button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end">
-              <DropdownMenuItem>{t('agentDetail.edit')}</DropdownMenuItem>
+              <DropdownMenuItem onClick={(e) => { e.preventDefault(); setIsEditOpen(true); }}>
+                {t('agentDetail.edit')}
+              </DropdownMenuItem>
               <DropdownMenuItem>{t('common.delete')}</DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
@@ -96,6 +103,11 @@ export function AgentCard({ agent }: AgentCardProps) {
           )}
         </div>
       </div>
+      <AgentEditModal
+        open={isEditOpen}
+        onOpenChange={setIsEditOpen}
+        agent={agent}
+      />
     </Link>
   );
 }

@@ -1,14 +1,28 @@
+import { useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { supabase } from '@/lib/supabase'
 import { useAuthStore } from '@/stores/authStore'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
+import { Select } from '@/components/ui/select'
 import type { Channel, Company } from '@/types'
-import { Loader2, CheckCircle, XCircle } from 'lucide-react'
+import { Loader2, CheckCircle, XCircle, Plus, Trash2 } from 'lucide-react'
+import { useLlmConnections } from '@/hooks/useLlmConnections'
 
 export function Settings() {
   const { companyId } = useAuthStore()
+  const { connections, isLoading: connectionsLoading, createConnection, deleteConnection } = useLlmConnections()
+
+  const [showAddConnection, setShowAddConnection] = useState(false)
+  const [newConnection, setNewConnection] = useState({
+    name: '',
+    provider: 'openai' as const,
+    model: '',
+    api_key: '',
+  })
 
   const { data: company, isLoading: companyLoading } = useQuery({
     queryKey: ['company', companyId],
@@ -44,7 +58,31 @@ export function Settings() {
     enabled: !!companyId,
   })
 
-  if (companyLoading || channelsLoading) {
+  const handleAddConnection = async () => {
+    try {
+      await createConnection.mutateAsync(newConnection)
+      setNewConnection({
+        name: '',
+        provider: 'openai',
+        model: '',
+        api_key: '',
+      })
+      setShowAddConnection(false)
+    } catch (error) {
+      console.error('Error creating connection:', error)
+    }
+  }
+
+  const handleDeleteConnection = async (id: string) => {
+    if (!confirm('Tem certeza que deseja excluir esta conexão?')) return
+    try {
+      await deleteConnection.mutateAsync(id)
+    } catch (error) {
+      console.error('Error deleting connection:', error)
+    }
+  }
+
+  if (companyLoading || channelsLoading || connectionsLoading) {
     return (
       <div className="flex items-center justify-center py-12">
         <Loader2 className="h-8 w-8 animate-spin" style={{ color: "var(--text-secondary)" }} />
@@ -135,23 +173,140 @@ export function Settings() {
 
       <Card>
         <CardHeader>
-          <CardTitle>Plano Atual</CardTitle>
+          <CardTitle>Conexões de IA</CardTitle>
           <CardDescription>
-            Informações sobre seu plano de assinatura
+            Gerencie suas credenciais de LLM para agentes
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <div className="space-y-4">
-            <div>
-              <Badge className="mb-2">Plano Gratuito</Badge>
-              <p className="text-sm" style={{ color: "var(--text-secondary)" }}>
-                Você está usando o plano gratuito com recursos limitados
+          {connections.length === 0 && !showAddConnection ? (
+            <div className="text-center py-8">
+              <p className="mb-4" style={{ color: "var(--text-secondary)" }}>
+                Nenhuma conexão configurada ainda
               </p>
+              <Button onClick={() => setShowAddConnection(true)}>
+                <Plus className="h-4 w-4 mr-2" />
+                Adicionar Conexão
+              </Button>
             </div>
-            <Button>Fazer Upgrade</Button>
-          </div>
+          ) : (
+            <div className="space-y-4">
+              {connections.map((connection) => (
+                <div
+                  key={connection.id}
+                  className="flex items-center justify-between p-4 border rounded-lg"
+                >
+                  <div>
+                    <p className="font-medium">{connection.name}</p>
+                    <p className="text-sm" style={{ color: "var(--text-secondary)" }}>
+                      {connection.provider} / {connection.model}
+                    </p>
+                  </div>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => handleDeleteConnection(connection.id)}
+                    disabled={deleteConnection.isPending}
+                  >
+                    <Trash2 className="h-4 w-4" />
+                  </Button>
+                </div>
+              ))}
+
+              {showAddConnection && (
+                <div className="p-4 border rounded-lg space-y-4 bg-muted/50">
+                  <div>
+                    <Label htmlFor="connection-name">Nome</Label>
+                    <Input
+                      id="connection-name"
+                      value={newConnection.name}
+                      onChange={(e) =>
+                        setNewConnection({ ...newConnection, name: e.target.value })
+                      }
+                      placeholder="Ex: OpenAI GPT-4"
+                    />
+                  </div>
+
+                  <div>
+                    <Label htmlFor="connection-provider">Provider</Label>
+                    <Select
+                      id="connection-provider"
+                      value={newConnection.provider}
+                      onChange={(e) =>
+                        setNewConnection({
+                          ...newConnection,
+                          provider: e.target.value as 'openai' | 'anthropic' | 'google',
+                        })
+                      }
+                    >
+                      <option value="openai">OpenAI</option>
+                      <option value="anthropic">Anthropic</option>
+                      <option value="google">Google</option>
+                    </Select>
+                  </div>
+
+                  <div>
+                    <Label htmlFor="connection-model">Model</Label>
+                    <Input
+                      id="connection-model"
+                      value={newConnection.model}
+                      onChange={(e) =>
+                        setNewConnection({ ...newConnection, model: e.target.value })
+                      }
+                      placeholder="Ex: gpt-4-turbo"
+                    />
+                  </div>
+
+                  <div>
+                    <Label htmlFor="connection-api-key">API Key</Label>
+                    <Input
+                      id="connection-api-key"
+                      type="password"
+                      value={newConnection.api_key}
+                      onChange={(e) =>
+                        setNewConnection({ ...newConnection, api_key: e.target.value })
+                      }
+                      placeholder="sk-..."
+                    />
+                  </div>
+
+                  <div className="flex gap-2">
+                    <Button
+                      onClick={handleAddConnection}
+                      disabled={
+                        !newConnection.name ||
+                        !newConnection.model ||
+                        !newConnection.api_key ||
+                        createConnection.isPending
+                      }
+                    >
+                      {createConnection.isPending && (
+                        <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                      )}
+                      Salvar
+                    </Button>
+                    <Button
+                      variant="outline"
+                      onClick={() => setShowAddConnection(false)}
+                    >
+                      Cancelar
+                    </Button>
+                  </div>
+                </div>
+              )}
+
+              {!showAddConnection && connections.length > 0 && (
+                <Button onClick={() => setShowAddConnection(true)} variant="outline">
+                  <Plus className="h-4 w-4 mr-2" />
+                  Adicionar Conexão
+                </Button>
+              )}
+            </div>
+          )}
         </CardContent>
       </Card>
+
+
     </div>
   )
 }

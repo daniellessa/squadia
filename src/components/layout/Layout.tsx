@@ -6,7 +6,7 @@ import { BottomNav } from './BottomNav';
 import { useAuth } from '@/hooks/useAuth';
 import { Sheet, SheetContent } from '@/components/ui/sheet';
 import { Link, useLocation } from 'react-router-dom';
-import { LayoutDashboard, Bot, CheckSquare, Settings } from 'lucide-react';
+import { LayoutDashboard, CheckSquare, Settings, MessageSquare, Bot, CreditCard, BookOpen } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useTranslation } from 'react-i18next';
 
@@ -28,8 +28,10 @@ export function Layout() {
 
   const navigation = [
     { name: t('dashboard.title'), href: '/dashboard', icon: LayoutDashboard },
-    { name: t('agents.title'), href: '/agents', icon: Bot },
+    { name: 'Chat', href: '/chat', icon: MessageSquare },
     { name: t('tasks.title'), href: '/tasks', icon: CheckSquare },
+    { name: 'Docs', href: '/docs', icon: BookOpen },
+    { name: 'Faturamento', href: '/billing', icon: CreditCard },
     { name: t('settings.title'), href: '/settings', icon: Settings },
   ];
 

@@ -1,0 +1,6 @@
+ALTER TABLE agents
+ADD COLUMN IF NOT EXISTS is_temp boolean DEFAULT false,
+ADD COLUMN IF NOT EXISTS created_by_agent_id uuid REFERENCES agents(id) ON DELETE SET NULL;
+
+ALTER TABLE tasks
+ADD COLUMN IF NOT EXISTS parent_task_id uuid REFERENCES tasks(id) ON DELETE SET NULL;

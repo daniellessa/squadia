@@ -106,45 +106,66 @@ export function Chat() {
                     message.direction === 'in' ? 'justify-end' : 'justify-start'
                   }`}
                 >
-                  <div
-                    className={`max-w-[70%] rounded-lg p-3 ${
-                      message.direction === 'in'
-                        ? 'bg-indigo-600 text-white'
-                        : 'bg-gray-800'
-                    }`}
-                  >
-                    <p className="text-sm whitespace-pre-wrap break-words">
-                      {message.content}
-                    </p>
-                    <p
-                      className={`text-xs mt-1 ${
-                        message.direction === 'in'
-                          ? 'text-indigo-200'
-                          : 'text-gray-400'
-                      }`}
+                  {message.direction === 'out' ? (
+                    <div className="flex items-end gap-2 justify-start">
+                      <div className="flex-shrink-0 h-8 w-8 rounded-full bg-indigo-500 flex items-center justify-center text-white font-semibold text-sm">
+                        {agent.name.charAt(0).toUpperCase()}
+                      </div>
+                      <div className="flex flex-col">
+                        <span className="text-xs mb-1" style={{ color: 'var(--text-secondary)' }}>
+                          {agent.name}
+                        </span>
+                        <div className="max-w-[70%] rounded-lg p-3 bg-gray-800">
+                          <p className="text-sm whitespace-pre-wrap break-words">
+                            {message.content}
+                          </p>
+                          <p className="text-xs mt-1 text-gray-400">
+                            {formatRelativeTime(message.created_at)}
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+                  ) : (
+                    <div
+                      className="max-w-[70%] rounded-lg p-3 bg-indigo-600 text-white"
                     >
-                      {formatRelativeTime(message.created_at)}
-                    </p>
-                  </div>
+                      <p className="text-sm whitespace-pre-wrap break-words">
+                        {message.content}
+                      </p>
+                      <p className="text-xs mt-1 text-indigo-200">
+                        {formatRelativeTime(message.created_at)}
+                      </p>
+                    </div>
+                  )}
                 </div>
               ))}
 
               {isTyping && (
                 <div className="flex justify-start">
-                  <div className="max-w-[70%] rounded-lg p-3 bg-gray-800">
-                    <div className="flex items-center gap-1">
-                      <div
-                        className="h-2 w-2 rounded-full bg-gray-400 animate-bounce"
-                        style={{ animationDelay: '0ms' }}
-                      />
-                      <div
-                        className="h-2 w-2 rounded-full bg-gray-400 animate-bounce"
-                        style={{ animationDelay: '150ms' }}
-                      />
-                      <div
-                        className="h-2 w-2 rounded-full bg-gray-400 animate-bounce"
-                        style={{ animationDelay: '300ms' }}
-                      />
+                  <div className="flex items-end gap-2 justify-start">
+                    <div className="flex-shrink-0 h-8 w-8 rounded-full bg-indigo-500 flex items-center justify-center text-white font-semibold text-sm">
+                      {agent.name.charAt(0).toUpperCase()}
+                    </div>
+                    <div className="flex flex-col">
+                      <span className="text-xs mb-1" style={{ color: 'var(--text-secondary)' }}>
+                        {agent.name}
+                      </span>
+                      <div className="max-w-[70%] rounded-lg p-3 bg-gray-800">
+                        <div className="flex items-center gap-1">
+                          <div
+                            className="h-2 w-2 rounded-full bg-gray-400 animate-bounce"
+                            style={{ animationDelay: '0ms' }}
+                          />
+                          <div
+                            className="h-2 w-2 rounded-full bg-gray-400 animate-bounce"
+                            style={{ animationDelay: '150ms' }}
+                          />
+                          <div
+                            className="h-2 w-2 rounded-full bg-gray-400 animate-bounce"
+                            style={{ animationDelay: '300ms' }}
+                          />
+                        </div>
+                      </div>
                     </div>
                   </div>
                 </div>

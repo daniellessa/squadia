@@ -9,7 +9,10 @@ import { Agents } from './pages/Agents'
 import { AgentDetail } from './pages/AgentDetail'
 import { Chat } from './pages/Chat'
 import { Tasks } from './pages/Tasks'
+import { Docs } from './pages/Docs'
 import { Settings } from './pages/Settings'
+import { Billing } from './pages/Billing'
+import { Chat2 } from './pages/Chat2'
 import { supabase } from './lib/supabase'
 import { useAuthStore } from './stores/authStore'
 import './i18n'
@@ -92,8 +95,11 @@ function AppRoutes() {
           <Route path="/agents" element={<Agents />} />
           <Route path="/agents/:id" element={<AgentDetail />} />
           <Route path="/chat/:id" element={<Chat />} />
+          <Route path="/chat" element={<Chat2 />} />
           <Route path="/tasks" element={<Tasks />} />
+          <Route path="/docs" element={<Docs />} />
           <Route path="/settings" element={<Settings />} />
+          <Route path="/billing" element={<Billing />} />
         </Route>
 
         <Route path="/" element={<Navigate to="/dashboard" replace />} />

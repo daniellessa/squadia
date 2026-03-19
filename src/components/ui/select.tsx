@@ -2,6 +2,8 @@ import * as React from "react"
 import { cn } from "@/lib/utils"
 import { ChevronDown } from "lucide-react"
 
+// ── Componente Select nativo simples ──────────────────────────────────────────
+
 export interface SelectProps extends React.SelectHTMLAttributes<HTMLSelectElement> {}
 
 const Select = React.forwardRef<HTMLSelectElement, SelectProps>(
@@ -17,7 +19,7 @@ const Select = React.forwardRef<HTMLSelectElement, SelectProps>(
             borderColor: "var(--border-default)",
             backgroundColor: "var(--bg-surface)",
             color: "var(--text-primary)",
-            ...style
+            ...style,
           }}
           ref={ref}
           {...props}
@@ -34,4 +36,42 @@ const Select = React.forwardRef<HTMLSelectElement, SelectProps>(
 )
 Select.displayName = "Select"
 
-export { Select }
+// ── Aliases shadcn-compatible (wrappers sobre o Select nativo) ────────────────
+
+interface SelectTriggerProps extends React.HTMLAttributes<HTMLDivElement> {
+  children?: React.ReactNode
+}
+const SelectTrigger = React.forwardRef<HTMLDivElement, SelectTriggerProps>(
+  ({ children, className, ...props }, ref) => (
+    <div ref={ref} className={cn("relative", className)} {...props}>
+      {children}
+    </div>
+  )
+)
+SelectTrigger.displayName = "SelectTrigger"
+
+const SelectValue = ({ placeholder }: { placeholder?: string }) => (
+  <span className="text-sm" style={{ color: "var(--text-secondary)" }}>
+    {placeholder}
+  </span>
+)
+SelectValue.displayName = "SelectValue"
+
+const SelectContent = ({ children }: { children: React.ReactNode }) => (
+  <>{children}</>
+)
+SelectContent.displayName = "SelectContent"
+
+interface SelectItemProps extends React.OptionHTMLAttributes<HTMLOptionElement> {
+  children: React.ReactNode
+}
+const SelectItem = React.forwardRef<HTMLOptionElement, SelectItemProps>(
+  ({ children, ...props }, ref) => (
+    <option ref={ref} {...props}>
+      {children}
+    </option>
+  )
+)
+SelectItem.displayName = "SelectItem"
+
+export { Select, SelectTrigger, SelectValue, SelectContent, SelectItem }

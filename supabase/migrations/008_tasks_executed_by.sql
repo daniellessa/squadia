@@ -1,0 +1,1 @@
+ALTER TABLE tasks ADD COLUMN IF NOT EXISTS executed_by uuid REFERENCES agents(id) ON DELETE SET NULL;

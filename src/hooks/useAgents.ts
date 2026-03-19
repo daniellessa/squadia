@@ -1,4 +1,5 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
+import { useEffect } from 'react'
 import { supabase } from '@/lib/supabase'
 import type { Agent } from '@/types'
 import { useAuthStore } from '@/stores/authStore'
@@ -24,6 +25,15 @@ export function useAgents() {
     enabled: !!companyId,
   })
 
+  // Polling leve a cada 10s para novos agentes criados pelo analista
+  useEffect(() => {
+    if (!companyId) return
+    const interval = setInterval(() => {
+      queryClient.invalidateQueries({ queryKey: ['agents', companyId] })
+    }, 10000)
+    return () => clearInterval(interval)
+  }, [companyId, queryClient])
+
   const createAgent = useMutation({
     mutationFn: async (agent: Omit<Agent, 'id' | 'created_at'>) => {
       const { data, error } = await supabase
@@ -33,7 +43,21 @@ export function useAgents() {
         .single()
 
       if (error) throw error
-      return data as Agent
+
+      const newAgent = data as Agent
+
+      // Generate and save the OpenClaw session key
+      const sessionKey = `agent:main:squadia-${newAgent.id}`
+      const { error: updateError } = await supabase
+        .from('agents')
+        .update({ openclaw_session_key: sessionKey })
+        .eq('id', newAgent.id)
+
+      if (updateError) {
+        console.warn('Failed to update openclaw_session_key:', updateError)
+      }
+
+      return { ...newAgent, openclaw_session_key: sessionKey }
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['agents', companyId] })
